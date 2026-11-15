@@ -1,0 +1,7 @@
+{
+  "name": "chat-dual",
+  "integrations": {
+    "capacitor": {}
+  },
+  "type": "angular-standalone"
+}
