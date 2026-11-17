@@ -5,7 +5,8 @@ test('visits the authentication page from the app root', async ({ page }) => {
   await expect(page).toHaveURL(/\/auth$/);
   await expect(page.locator('ion-title')).toHaveText('Chat Dual');
   await expect(page.locator('ion-input[type="email"] input')).toBeVisible();
-  await expect(page.locator('ion-input[type="password"] input')).toBeVisible();
+  await expect(page.locator('ion-input[name="contrasena"] input')).toBeVisible();
+  await expect(page.locator('ion-input[name="contrasena"] input')).toHaveAttribute('type', 'password');
 });
 
 test('requires Firebase authentication before opening chat rooms', async ({ page }) => {
@@ -27,4 +28,22 @@ test('collects personal details once during signup and fits a mobile screen', as
 test('requires a Firebase session before editing a profile', async ({ page }) => {
   await page.goto('/profile');
   await expect(page).toHaveURL(/\/auth$/);
+});
+
+test('shows and hides the password without changing it or submitting the login', async ({ page }) => {
+  await page.goto('/auth');
+  const password = page.locator('ion-input[name="contrasena"] input');
+  await password.fill('ClaveDePrueba123');
+  await expect(password).toHaveAttribute('type', 'password');
+  await page.getByRole('button', { name: 'Mostrar contraseña', exact: true }).click();
+  await expect(password).toHaveAttribute('type', 'text');
+  await expect(password).toHaveValue('ClaveDePrueba123');
+  await expect(page).toHaveURL(/\/auth$/);
+  await page.getByRole('button', { name: 'Ocultar contraseña', exact: true }).click();
+  await expect(password).toHaveAttribute('type', 'password');
+  await expect(password).toHaveValue('ClaveDePrueba123');
+  await page.getByRole('button', { name: 'Mostrar contraseña', exact: true }).click();
+  await page.getByRole('button', { name: 'Crear cuenta', exact: true }).click();
+  await expect(password).toHaveAttribute('type', 'password');
+  await expect(password).toHaveValue('');
 });

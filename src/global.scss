@@ -43,3 +43,6 @@ ion-toast.chat-toast {
   --width: min(560px, calc(100% - 24px));
 }
 ion-alert.location-confirmation .alert-message { white-space: pre-line; }
+
+.brand-title { display: inline-flex; align-items: center; gap: 10px; vertical-align: middle; }
+.brand-title img { display: block; border-radius: 8px; }

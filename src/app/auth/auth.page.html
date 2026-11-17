@@ -1,10 +1,16 @@
 ﻿<ion-header class="auth-header">
-  <ion-toolbar><ion-title>Chat Dual</ion-title></ion-toolbar>
+  <ion-toolbar
+    ><ion-title
+      ><span class="brand-title"
+        ><img src="assets/brand/chat-dual-logo.svg" alt="" width="30" height="30" />Chat Dual</span
+      ></ion-title
+    ></ion-toolbar
+  >
 </ion-header>
 <ion-content>
   <main class="auth-layout">
     <section class="intro">
-      <div class="brand-mark" aria-hidden="true">•••</div>
+      <img class="brand-mark" src="assets/brand/chat-dual-logo.svg" alt="Logo de Chat Dual" width="80" height="80" />
       <p class="eyebrow">TU GENTE, MÁS CERCA</p>
       <h1>Un mensaje.<br /><span>Mil conexiones.</span></h1>
       <p>Comparte tu día, crea una sala y mantén la conversación con las personas que importan.</p>
@@ -101,12 +107,29 @@
           label="Contraseña"
           label-placement="stacked"
           fill="outline"
-          type="password"
+          [type]="mostrarContrasena ? 'text' : 'password'"
           name="contrasena"
           [autocomplete]="modo === 'registro' ? 'new-password' : 'current-password'"
           [(ngModel)]="contrasena"
           [disabled]="cargando"
-        />
+        >
+          <ion-button
+            type="button"
+            slot="end"
+            fill="clear"
+            class="password-toggle"
+            [attr.aria-label]="mostrarContrasena ? 'Ocultar contraseña' : 'Mostrar contraseña'"
+            [attr.aria-pressed]="mostrarContrasena"
+            [disabled]="cargando"
+            (click)="mostrarContrasena = !mostrarContrasena"
+          >
+            <ion-icon
+              slot="icon-only"
+              [name]="mostrarContrasena ? 'eye-off-outline' : 'eye-outline'"
+              aria-hidden="true"
+            />
+          </ion-button>
+        </ion-input>
         } @else {
         <p class="field-hint">Sesión iniciada como {{ usuario.email }}</p>
         }

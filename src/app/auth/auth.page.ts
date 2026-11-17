@@ -2,9 +2,11 @@
 import { ChangeDetectorRef, Component, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
-import { IonContent, IonHeader, IonToolbar, IonTitle, IonInput, IonButton, IonText } from '@ionic/angular';
+import { IonContent, IonHeader, IonToolbar, IonTitle, IonInput, IonButton, IonText, IonIcon } from '@ionic/angular';
 import { FirebaseError } from 'firebase/app';
 import type { User } from 'firebase/auth';
+import { addIcons } from 'ionicons';
+import { eyeOutline, eyeOffOutline } from 'ionicons/icons';
 
 import { AuthService } from '../services/auth.services';
 import type { DatosPerfil } from '../services/profiles.service';
@@ -27,11 +29,16 @@ import { AvatarComponent } from '../shared/avatar.component';
     IonButton,
     IonText,
     AvatarComponent,
+    IonIcon,
   ],
 })
 export class AuthPage implements OnInit, OnDestroy {
+  constructor() {
+    addIcons({ eyeOutline, eyeOffOutline });
+  }
   correo = '';
   contrasena = '';
+  mostrarContrasena = false;
   modo: 'login' | 'registro' = 'login';
   usuario: User | null = null;
   error = '';
@@ -116,6 +123,7 @@ export class AuthPage implements OnInit, OnDestroy {
     this.modo = this.modo === 'login' ? 'registro' : 'login';
     this.error = '';
     this.contrasena = '';
+    this.mostrarContrasena = false;
   }
   elegirFoto(event: Event): void {
     const input = event.target as HTMLInputElement;
@@ -158,6 +166,7 @@ export class AuthPage implements OnInit, OnDestroy {
           : await this.authService.ingresar(this.correo.trim(), this.contrasena);
       this.usuario = credencial.user;
       this.contrasena = '';
+      this.mostrarContrasena = false;
       if (this.modo === 'registro') {
         // Si falla Supabase la cuenta sigue iniciada y se ofrece reintentar el perfil.
         this.perfilCargado = true;
@@ -197,6 +206,7 @@ export class AuthPage implements OnInit, OnDestroy {
       this.nombre = this.apellido = this.alias = this.ciudad = this.contrasena = '';
       this.foto = null;
       this.fotoPath = this.fotoUrl = null;
+      this.mostrarContrasena = false;
       this.liberarPreview();
       this.modo = 'login';
       await this.router.navigateByUrl('/auth', { replaceUrl: true });

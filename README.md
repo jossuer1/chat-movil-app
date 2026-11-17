@@ -36,3 +36,10 @@ cd android
 ```
 
 El resultado se genera en `android/app/build/outputs/apk/debug/app-debug.apk`. La copia preparada para instalar está en `artifacts/chat-dual-debug.apk`. Los APK, los archivos compilados y las claves de firma no se suben a Git. El APK utiliza la configuración pública del cliente para conectarse a Firebase y Supabase. Las credenciales administrativas permanecen exclusivamente en el backend.
+
+
+## Identidad visual
+
+El logo vectorial se encuentra en `src/assets/brand/chat-dual-logo.svg`. Ejecuta `npm run assets:android` para regenerar los iconos y las pantallas de inicio de Android a partir de ese archivo. El generador utiliza el Chromium de Playwright (`npx playwright install chromium` si hace falta). El splash nativo se configura en `capacitor.config.ts` y se cierra cuando Angular termina de renderizar la primera ruta, con un cierre de respaldo para evitar bloqueos. Android 12 y posteriores muestran el splash nativo del sistema con el logo central; las versiones anteriores utilizan los recursos por densidad.
+
+El APK actualizado de esta identidad visual es `artifacts/chat-dual-v1.1-debug.apk` (versionCode 2). El campo de contrasena permite alternar su visibilidad con un boton accesible y vuelve a ocultarse al cambiar entre login y registro.
