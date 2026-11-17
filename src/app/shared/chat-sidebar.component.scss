@@ -1,0 +1,29 @@
+.rooms { height: 100%; box-sizing: border-box; border-right: 1px solid var(--line); padding: 24px 16px; display: flex; flex-direction: column; gap: 16px; }
+.account { display: flex; gap: 12px; align-items: center; padding: 0 8px 16px; color: inherit; text-decoration: none; border-bottom: 1px solid var(--line); }
+.account div, .room > span { min-width: 0; }
+.account strong, .room strong { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+small { display: block; color: var(--muted); font-size: 12px; margin-top: 5px; }
+.section-heading { display: flex; align-items: center; gap: 8px; }
+.section-heading { justify-content: space-between; padding-left: 8px; }
+h1 { font-size: 27px; font-weight: 750; margin: 0; letter-spacing: -.8px; }
+h1 span { color: #9a91b9; font-size: 14px; background: #f2effb; padding: 3px 8px; border-radius: 20px; vertical-align: middle; }
+.search { display: flex; align-items: center; gap: 10px; background: #f4f5f9; color: var(--muted); border-radius: 12px; padding: 13px; }
+.search input { background: transparent; border: 0; width: 100%; outline-offset: 5px; color: inherit; min-width: 0; }
+.list-label { font-size: 10px; letter-spacing: 1.5px; font-weight: 700; color: var(--muted); margin: 6px 8px; }
+.room { display: flex; align-items: center; gap: 12px; width: 100%; text-align: left; padding: 14px 10px; border-radius: 14px; background: transparent; color: inherit; margin-bottom: 5px; }
+.room.selected { background: #f0ecff; }
+.room:hover { background: #f6f4ff; }
+.room-arrow { margin-left: auto; color: #a099b5; font-size: 22px; }
+.room-list { flex: 1; }
+.empty-list { padding: 20px 8px; font-size: 14px; color: var(--muted); }
+.sidebar-footer { border-top: 1px solid var(--line); padding-top: 12px; font-size: 12px; }
+.sidebar-footer > div { display: flex; justify-content: space-between; align-items: center; padding: 8px; }
+button, a { cursor: pointer; }
+.sidebar-footer button { background: none; color: var(--muted); }
+.uid { font-size: 10px; color: var(--muted); overflow-wrap: anywhere; padding: 8px; }
+.uid code { display: block; padding-top: 10px; }
+
+:host { --line: #eeedf5; --muted: #85869a; min-width: 0; }
+ion-button { --border-radius: 12px; --box-shadow: none; text-transform: none; letter-spacing: 0; }
+button:disabled { opacity: .5; }
+@media(max-width:760px) { .rooms { border: 0; } }

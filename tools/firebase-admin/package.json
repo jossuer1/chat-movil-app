@@ -1,0 +1,8 @@
+{
+  "name": "chat-dual-firebase-admin-tools",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "firebase-admin": "^14.5.1"
+  }
+}

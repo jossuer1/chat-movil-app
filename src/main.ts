@@ -10,6 +10,9 @@ import { IonicRouteStrategy, provideIonicAngular } from '@ionic/angular';
 
 import { AppComponent } from './app/app.component';
 import { routes } from './app/app.routes';
+import { firebaseApp } from './app/firebase.config';
+
+console.log('Firebase inicializado:', firebaseApp.name);
 
 bootstrapApplication(AppComponent, {
   providers: [

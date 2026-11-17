@@ -31,6 +31,11 @@ log.txt
 
 # Node
 /node_modules
+**/node_modules/
+functions/.secret.local
+functions/.env*
+supabase/.temp/
+supabase/functions/.env*
 npm-debug.log
 yarn-error.log
 
@@ -55,6 +60,7 @@ yarn-error.log
 
 # Miscellaneous
 /.angular
+/.firebase/
 /.angular/cache
 .sass-cache/
 /.nx
@@ -74,3 +80,53 @@ Thumbs.db
 /playwright-report/
 /blob-report/
 /playwright/.cache/
+
+# Credenciales y configuracion privada del proyecto (conservar solo en el equipo)
+src/app/firebase.config.ts
+src/app/supabase.config.ts
+src/app/chat.config.ts
+src/environments/environment*.ts
+!src/environments/*.example.ts
+.env
+.env.*
+**/.env
+**/.env.*
+!**/.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+*.jks
+*.keystore
+*.mobileprovision
+**/google-services.json
+**/GoogleService-Info.plist
+**/*firebase-adminsdk*.json
+**/*adminsdk*.json
+**/service-account*.json
+**/serviceAccount*.json
+**/*credentials*.json
+**/*credential*.json
+**/*secrets*.json
+**/credentials/
+**/Credenciales/
+**/secrets/
+**/.aws/
+**/.ssh/
+**/.supabase/
+**/.npmrc
+**/.netrc
+**/.git-credentials
+.firebaserc
+# Copias administrativas, certificados y archivos comprimidos que pueden incluir secretos
+**/*admin*.json
+*.p8
+*.der
+*.zip
+*.7z
+*.rar
+*.tar
+*.gz
+src/app/firebase.config.ts.*
+src/app/supabase.config.ts.*
+src/app/chat.config.ts.*

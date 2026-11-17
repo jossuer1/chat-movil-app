@@ -1,4 +1,4 @@
-/*
+﻿/*
  * App Global CSS
  * ----------------------------------------------------------------------------
  * Put style rules here that you want to apply globally. These styles are for
@@ -34,4 +34,12 @@
 
 /* @import "@ionic/angular/css/palettes/dark.always.css"; */
 /* @import "@ionic/angular/css/palettes/dark.class.css"; */
-@import '@ionic/angular/css/palettes/dark.system.css';
+/* La interfaz usa una paleta clara consistente. */
+
+
+ion-toast.chat-toast {
+  --border-radius: 14px;
+  --box-shadow: 0 8px 28px #25263c24;
+  --width: min(560px, calc(100% - 24px));
+}
+ion-alert.location-confirmation .alert-message { white-space: pre-line; }

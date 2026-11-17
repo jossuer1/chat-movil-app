@@ -1,2 +1,11 @@
-// For information on how to create your own theme, please refer to:
-// https://ionicframework.com/docs/theming/
+﻿:root {
+  --ion-font-family: 'Segoe UI', Arial, sans-serif;
+  --ion-color-primary: #7659e7;
+  --ion-color-primary-rgb: 118, 89, 231;
+  --ion-color-primary-contrast: #fff;
+  --ion-color-primary-shade: #684ecb;
+  --ion-color-primary-tint: #846aeb;
+  --ion-background-color: #fff;
+  --ion-text-color: #25263c;
+  --ion-toolbar-background: #fff;
+}

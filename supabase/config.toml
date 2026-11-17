@@ -1,0 +1,6 @@
+project_id = "chat-dual"
+
+[functions.chat-api]
+enabled = true
+verify_jwt = false
+entrypoint = "./functions/chat-api/index.ts"

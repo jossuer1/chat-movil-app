@@ -1,0 +1,134 @@
+﻿<ion-header class="auth-header">
+  <ion-toolbar><ion-title>Chat Dual</ion-title></ion-toolbar>
+</ion-header>
+<ion-content>
+  <main class="auth-layout">
+    <section class="intro">
+      <div class="brand-mark" aria-hidden="true">•••</div>
+      <p class="eyebrow">TU GENTE, MÁS CERCA</p>
+      <h1>Un mensaje.<br /><span>Mil conexiones.</span></h1>
+      <p>Comparte tu día, crea una sala y mantén la conversación con las personas que importan.</p>
+      <div class="intro-bubbles" aria-hidden="true">
+        <span>¿Nos conectamos? 👋</span><span>¡Ya estoy aquí! 💜</span>
+      </div>
+      <small>Chat Dual · Conversaciones en tiempo real</small>
+    </section>
+    <section class="auth-panel" aria-label="Cuenta de Chat Dual">
+      @if (verificandoSesion) {
+      <p role="status">Preparando tu cuenta...</p>
+      } @else {
+      <p class="eyebrow">{{ editar ? 'TU ESPACIO' : 'BIENVENIDO A CHAT DUAL' }}</p>
+      <h2>
+        {{ usuario ? (editar ? 'Mi perfil' : 'Completa tu cuenta') : modo === 'login' ? 'Qué bueno verte' : 'Crea tu
+        cuenta' }}
+      </h2>
+      <p class="subtitle">
+        {{ usuario ? 'Así te verán en tus conversaciones.' : modo === 'login' ? 'Inicia sesión y continúa donde lo
+        dejaste.' : 'Cuéntanos un poco de ti para empezar a chatear.' }}
+      </p>
+      @if (!usuario || perfilCargado) {
+      <form (ngSubmit)="usuario ? guardarMiPerfil() : procesar()">
+        @if (usuario || modo === 'registro') {
+        <div class="photo-picker">
+          <app-avatar [name]="nombre + ' ' + apellido" [src]="fotoUrl" />
+          <label class="photo-label"
+            >{{ fotoUrl ? 'Cambiar foto' : 'Añadir foto de perfil' }}
+            <input
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              [disabled]="cargando"
+              (change)="elegirFoto($event)"
+            />
+          </label>
+          <small>Opcional · JPG, PNG o WebP · hasta 3 MB</small>
+        </div>
+        <div class="form-grid">
+          <ion-input
+            label="Nombre"
+            label-placement="stacked"
+            fill="outline"
+            name="nombre"
+            autocomplete="given-name"
+            maxlength="80"
+            [(ngModel)]="nombre"
+            [disabled]="cargando"
+          />
+          <ion-input
+            label="Apellido"
+            label-placement="stacked"
+            fill="outline"
+            name="apellido"
+            autocomplete="family-name"
+            maxlength="80"
+            [(ngModel)]="apellido"
+            [disabled]="cargando"
+          />
+        </div>
+        <ion-input
+          label="Nombre de usuario"
+          label-placement="stacked"
+          fill="outline"
+          name="alias"
+          autocomplete="username"
+          maxlength="24"
+          placeholder="ej. ana_perez"
+          [(ngModel)]="alias"
+          [disabled]="cargando"
+        />
+        <small class="field-hint">Tu @usuario es único. Usa entre 3 y 24 letras, números o guion bajo.</small>
+        <ion-input
+          label="Ciudad"
+          label-placement="stacked"
+          fill="outline"
+          name="ciudad"
+          autocomplete="address-level2"
+          maxlength="100"
+          [(ngModel)]="ciudad"
+          [disabled]="cargando"
+        />
+        } @if (!usuario) {
+        <ion-input
+          label="Correo electrónico"
+          label-placement="stacked"
+          fill="outline"
+          type="email"
+          name="correo"
+          autocomplete="email"
+          [(ngModel)]="correo"
+          [disabled]="cargando"
+        />
+        <ion-input
+          label="Contraseña"
+          label-placement="stacked"
+          fill="outline"
+          type="password"
+          name="contrasena"
+          [autocomplete]="modo === 'registro' ? 'new-password' : 'current-password'"
+          [(ngModel)]="contrasena"
+          [disabled]="cargando"
+        />
+        } @else {
+        <p class="field-hint">Sesión iniciada como {{ usuario.email }}</p>
+        }
+        <ion-button type="submit" expand="block" [disabled]="cargando"
+          >{{ cargando ? 'Guardando...' : usuario ? 'Guardar y entrar al chat' : modo === 'login' ? 'Iniciar sesión' :
+          'Crear cuenta y chatear' }}</ion-button
+        >
+      </form>
+      } @else { <ion-button (click)="cargarPerfil()">Reintentar cargar perfil</ion-button> } @if (error) {
+      <ion-text color="danger"><p role="alert">{{ error }}</p></ion-text> } @if (!usuario) {
+      <p class="switch-mode">
+        {{ modo === 'login' ? '¿Primera vez por aquí?' : '¿Ya tienes una cuenta?' }}
+        <button type="button" [disabled]="cargando" (click)="cambiarModo()">
+          {{ modo === 'login' ? 'Crear cuenta' : 'Iniciar sesión' }}
+        </button>
+      </p>
+      } @else {
+      <div class="profile-actions">
+        @if (editar) { <a routerLink="/home">Volver al chat</a> }
+        <button type="button" [disabled]="cargando" (click)="cerrarSesion()">Cerrar sesión</button>
+      </div>
+      } }
+    </section>
+  </main>
+</ion-content>

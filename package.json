@@ -16,9 +16,19 @@
     "test": "npm run test:unit && npm run test:e2e",
     "test:unit": "ng test --no-watch",
     "test:unit:watch": "ng test --watch",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "check:edge": "deno check --config supabase/functions/chat-api/deno.json supabase/functions/chat-api/index.ts",
+    "test:edge": "deno test --config supabase/functions/chat-api/deno.json --allow-env supabase/functions/",
+    "test:firestore": "node functions/node_modules/firebase-tools/lib/bin/firebase.js emulators:exec --project demo-chat-dual --only firestore \"node tools/test-firestore.cjs\"",
+    "deploy:edge": "supabase functions deploy chat-api --remote=lcmrvlnxpnzgqgiwzxpv --use-api"
   },
   "private": true,
+  "overrides": {
+    "@grpc/grpc-js": "^1.14.7",
+    "@capacitor-firebase/messaging": {
+      "firebase": "$firebase"
+    }
+  },
   "dependencies": {
     "@angular/common": "22.2.5",
     "@angular/compiler": "22.2.5",
@@ -26,12 +36,16 @@
     "@angular/forms": "22.2.5",
     "@angular/platform-browser": "22.2.5",
     "@angular/router": "22.2.5",
+    "@capacitor-firebase/messaging": "^8.6.0",
     "@capacitor/app": "8.1.2",
     "@capacitor/core": "8.6.2",
+    "@capacitor/geolocation": "^8.2.4",
     "@capacitor/haptics": "8.0.2",
     "@capacitor/keyboard": "8.0.6",
     "@capacitor/status-bar": "8.0.4",
     "@ionic/angular": "^9.0.0",
+    "@supabase/supabase-js": "^2.119.0",
+    "firebase": "^13.3.0",
     "ionicons": "^8.1.0",
     "rxjs": "~7.8.0",
     "tslib": "^2.3.0"
@@ -48,9 +62,11 @@
     "@playwright/test": "^1.64.1",
     "@types/node": "^26.6.6",
     "angular-eslint": "22.6.0",
+    "deno": "^2.9.6",
     "eslint": "^10.10.0",
     "jsdom": "^31.0.0",
     "prettier": "^3.9.10",
+    "supabase": "^3.1.0",
     "typescript": "~6.0.0",
     "typescript-eslint": "^8.61.0",
     "vitest": "^5.1.0"
