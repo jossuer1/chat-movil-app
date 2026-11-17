@@ -19,3 +19,20 @@ Las claves administrativas de Firebase y la clave `service_role` de Supabase se 
 Los identificadores de proyectos, nombres de tablas, reglas y código de integración forman parte del código publicado. No conceden acceso por sí mismos. Las configuraciones con claves reales, incluso las claves públicas del cliente, se mantienen fuera de este repositorio por decisión del propietario.
 
 Consulta `docs/chat-setup.md` para el backend y las pruebas. Una copia recién descargada necesita completar la configuración local antes de compilar.
+
+## APK de Android
+
+El proyecto nativo está en `android/`, con el paquete `com.jossuer.chatdual` y el nombre **Chat Dual**. La compilación actual genera un APK de prueba firmado con la clave de depuración local.
+
+Requisitos: JDK 21, Android SDK 36 y Build Tools 36.0.0. Antes de compilar, completa las configuraciones locales descritas arriba y coloca el `google-services.json` de la aplicación Android correspondiente en `android/app/`. Este archivo y `android/local.properties` están excluidos de Git.
+
+Desde PowerShell, dentro de `chat-dual`:
+
+```powershell
+npm run build
+npx cap sync android
+cd android
+.\gradlew.bat assembleDebug
+```
+
+El resultado se genera en `android/app/build/outputs/apk/debug/app-debug.apk`. La copia preparada para instalar está en `artifacts/chat-dual-debug.apk`. Los APK, los archivos compilados y las claves de firma no se suben a Git. El APK utiliza la configuración pública del cliente para conectarse a Firebase y Supabase. Las credenciales administrativas permanecen exclusivamente en el backend.

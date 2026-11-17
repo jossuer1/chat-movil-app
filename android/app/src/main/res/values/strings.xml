@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Chat Dual</string>
+    <string name="title_activity_main">Chat Dual</string>
+    <string name="package_name">com.jossuer.chatdual</string>
+    <string name="custom_url_scheme">com.jossuer.chatdual</string>
+</resources>

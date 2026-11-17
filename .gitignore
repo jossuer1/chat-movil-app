@@ -130,3 +130,15 @@ src/environments/environment*.ts
 src/app/firebase.config.ts.*
 src/app/supabase.config.ts.*
 src/app/chat.config.ts.*
+
+# Android: compilaciones, configuracion local y APK de entrega
+*.apk
+*.aab
+**/local.properties
+**/.gradle/
+**/build/
+/artifacts/
+/android/app/src/main/assets/public/
+/android/app/src/main/assets/capacitor.config.json
+/android/app/src/main/assets/capacitor.plugins.json
+/android/capacitor-cordova-android-plugins/
