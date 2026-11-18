@@ -42,4 +42,10 @@ El resultado se genera en `android/app/build/outputs/apk/debug/app-debug.apk`. L
 
 El logo vectorial se encuentra en `src/assets/brand/chat-dual-logo.svg`. Ejecuta `npm run assets:android` para regenerar los iconos y las pantallas de inicio de Android a partir de ese archivo. El generador utiliza el Chromium de Playwright (`npx playwright install chromium` si hace falta). El splash nativo se configura en `capacitor.config.ts` y se cierra cuando Angular termina de renderizar la primera ruta, con un cierre de respaldo para evitar bloqueos. Android 12 y posteriores muestran el splash nativo del sistema con el logo central; las versiones anteriores utilizan los recursos por densidad.
 
-El APK actualizado de esta identidad visual es `artifacts/chat-dual-v1.1-debug.apk` (versionCode 2). El campo de contrasena permite alternar su visibilidad con un boton accesible y vuelve a ocultarse al cambiar entre login y registro.
+La versión de prueba actual es `artifacts/chat-dual-v1.9-debug.apk` (versionCode 10). Puede instalarse sobre versiones de prueba con la misma firma. El campo de contraseña permite alternar su visibilidad y vuelve a ocultarse al cambiar entre inicio de sesión y registro.
+
+## Navegación
+
+La bienvenida, el inicio de sesión y el registro usan `/`, `/login` y `/register`. Chats, Amigos y Ajustes tienen rutas propias y comparten la barra inferior. La sala `/room/:id` y su pantalla de participantes tienen navegación independiente. `/profile` edita la cuenta desde Ajustes.
+
+El enlace histórico `/home?room=…` redirige a la sala correspondiente y conserva el destino cuando hay que iniciar sesión. La búsqueda de contactos consulta `chat-api` antes de habilitar el envío de la solicitud.

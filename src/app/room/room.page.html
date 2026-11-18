@@ -1,0 +1,150 @@
+<ion-content [scrollY]="false">
+  <main class="room-layout">
+    <section class="conversation" aria-label="Conversación">
+      @if (sala(); as actual) {
+      <header class="room-header">
+        <ion-back-button class="back" defaultHref="/chats" text="" aria-label="Volver a chats" />
+        <app-avatar [name]="actual.title" [src]="fotoConversacion()" />
+        <div>
+          <h2>{{ actual.title }}</h2>
+          <small>{{ actual.direct ? 'Chat directo' : actual.memberUids.length + ' participantes' }}</small>
+        </div>
+        @if (!actual.direct) {
+        <ion-button
+          class="manage"
+          fill="clear"
+          [routerLink]="['/room', actual.id, 'participants']"
+          aria-label="Gestionar participantes"
+          title="Gestionar participantes"
+          ><ion-icon name="person-add-outline" slot="icon-only"
+        /></ion-button>
+        }
+      </header>
+      <div class="conversation-scroll" #conversationScroll tabindex="0" aria-label="Historial de la conversación">
+        <div class="messages" aria-label="Mensajes">
+          @if (mensajes().length >= cantidad) {
+          <ion-button fill="clear" (click)="cargarAnteriores()">Cargar mensajes anteriores</ion-button> } @for (mensaje
+          of mensajes(); track mensaje.id) { @let continuacion = continuaMensaje(mensaje, mensajes()[$index - 1]);
+          <article class="message" [class.own]="mensaje.authorUid === uid()" [class.continued]="continuacion">
+            @if (!continuacion) {
+            <div class="message-meta">
+              <app-avatar [name]="nombreAutor(mensaje)" [src]="fotoAutor(mensaje.authorUid)" />
+              <strong>{{ nombreAutor(mensaje) }}</strong>
+            </div>
+            }
+            <div class="bubble">
+              @if (editandoId === mensaje.id) {
+              <ion-textarea label="Editar mensaje" maxlength="4000" [(ngModel)]="textoEditado" [disabled]="ocupado()" />
+              <ion-button size="small" [disabled]="ocupado() || !textoEditado.trim()" (click)="guardarEdicion()"
+                >Guardar</ion-button
+              >
+              <ion-button size="small" fill="clear" (click)="editandoId = ''">Cancelar</ion-button>
+              } @else { @if (mensaje.text) {
+              <p class="message-text">{{ mensaje.text }}</p>
+              } @if (mensaje.attachment; as adjunto) {
+              <button class="download" type="button" [disabled]="ocupado()" (click)="descargar(adjunto)">
+                <ion-icon name="document-attach-outline" aria-hidden="true" />
+                <span><strong>{{ adjunto.name }}</strong><small>{{ (adjunto.size / 1024).toFixed(1) }} KB</small></span>
+              </button>
+              } @if (mensaje.location; as ubicacion) {
+              <a
+                class="download location-card"
+                [href]="'https://www.openstreetmap.org/?mlat=' + ubicacion.latitude + '&mlon=' + ubicacion.longitude + '#map=16/' + ubicacion.latitude + '/' + ubicacion.longitude"
+                target="_blank"
+                rel="noopener noreferrer"
+                ><ion-icon name="location-outline" aria-hidden="true" />
+                <span><strong>Ubicación compartida</strong><small>Abrir en el mapa</small></span></a
+              >
+              } }
+              <div class="message-footer">
+                @if (mensaje.editedAt) { <small>Editado</small> }
+                <time>{{ mensaje.createdAt?.toDate() | date:'shortTime' }}</time>
+                <button
+                  class="message-menu"
+                  type="button"
+                  aria-label="Opciones del mensaje"
+                  aria-haspopup="dialog"
+                  [disabled]="ocupado()"
+                  (click)="opcionesMensaje(mensaje)"
+                >
+                  <ion-icon name="ellipsis-horizontal" aria-hidden="true" />
+                </button>
+              </div>
+            </div>
+            <div class="message-actions">
+              @for (emoji of emojis; track emoji) { @if (numeroReacciones(mensaje, emoji); as cantidadReacciones) {
+              <button
+                type="button"
+                [attr.aria-label]="'Reaccionar con ' + emoji"
+                [attr.aria-pressed]="mensaje.reactions[uid()] === emoji"
+                [disabled]="ocupado()"
+                (click)="reaccionar(mensaje, emoji)"
+              >
+                {{ emoji }} {{ cantidadReacciones }}
+              </button>
+              } }
+            </div>
+          </article>
+          } @empty {
+          <div class="first-message">
+            <h3>El chat está listo</h3>
+            <p>Envía el primer mensaje.</p>
+          </div>
+          }
+        </div>
+      </div>
+      <form class="composer" (ngSubmit)="enviar()">
+        <div class="compose-actions">
+          <label class="file-label" title="Adjuntar archivo"
+            ><ion-icon name="attach-outline" aria-hidden="true" /><input
+              aria-label="Adjuntar archivo"
+              type="file"
+              [disabled]="ocupado()"
+              (change)="elegirArchivo($event)"
+          /></label>
+          <ion-button
+            fill="clear"
+            aria-label="Compartir ubicación"
+            title="Compartir ubicación"
+            [disabled]="ocupado() || !perfil()"
+            (click)="enviar(true)"
+            ><ion-icon name="location-outline" slot="icon-only"
+          /></ion-button>
+          <ion-textarea
+            aria-label="Mensaje"
+            placeholder="Mensaje"
+            name="texto"
+            maxlength="4000"
+            [rows]="1"
+            [autoGrow]="true"
+            [(ngModel)]="texto"
+            [disabled]="ocupado() || !perfil()"
+          />
+          <ion-button
+            class="send"
+            type="submit"
+            aria-label="Enviar mensaje"
+            title="Enviar mensaje"
+            [disabled]="ocupado() || !perfil() || (!texto.trim() && !archivo)"
+            ><ion-icon name="send-outline" slot="icon-only"
+          /></ion-button>
+        </div>
+        @if (archivo) {
+        <p>
+          {{ archivo.name }}
+          <button type="button" [disabled]="ocupado()" (click)="archivo = null">Quitar archivo</button>
+        </p>
+        }
+      </form>
+      } @else {
+      <div class="empty-room">
+        @if (session.cargando()) {
+        <p role="status">Cargando conversación…</p>
+        } @else {
+        <h2>Conversación no disponible</h2>
+        <ion-button routerLink="/chats" fill="clear">Volver a chats</ion-button> }
+      </div>
+      }
+    </section>
+  </main>
+</ion-content>

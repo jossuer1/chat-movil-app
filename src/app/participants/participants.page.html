@@ -1,0 +1,62 @@
+﻿<ion-header>
+  <header class="screen-header">
+    <ion-back-button text="" [defaultHref]="'/room/' + id" aria-label="Volver a la conversación" />
+    <h1>{{ puedeEditar() ? 'Gestionar participantes' : 'Participantes' }}</h1>
+  </header>
+</ion-header>
+<ion-content>
+  <main class="screen-body">
+    @if (error()) {
+    <p class="screen-error" role="alert">{{ error() }}</p>
+    } @if (cargando()) {
+    <p role="status">Cargando participantes…</p>
+    } @else if (sala(); as actual) { @if (!actual.direct) {
+    <label class="screen-search">
+      <ion-icon name="search-outline" aria-hidden="true" />
+      <input
+        type="search"
+        aria-label="Buscar amigos o participantes"
+        placeholder="Buscar amigos o participantes"
+        [ngModel]="busqueda()"
+        (ngModelChange)="busqueda.set($event)"
+      />
+    </label>
+    <div class="screen-list">
+      @for (persona of opciones(); track persona.uid) {
+      <div class="screen-card contact-row member-row">
+        <app-avatar [name]="persona.nombre" [src]="persona.foto_url" />
+        <div>
+          <strong>{{ persona.nombre }}</strong>
+          @if (persona.usuario) { <small>{{ '@' + persona.usuario }}</small> } @if (esCreador(persona.uid)) {
+          <small>Creador</small> }
+        </div>
+        @if (puedeEditar()) {
+        <input
+          type="checkbox"
+          [attr.aria-label]="persona.nombre"
+          [checked]="esParticipante(persona.uid)"
+          [disabled]="guardando() || esCreador(persona.uid)"
+          (change)="seleccionar(persona.uid, $any($event.target).checked)"
+        />
+        }
+      </div>
+      } @empty {
+      <p class="screen-card">No hay coincidencias.</p>
+      }
+    </div>
+    } @else {
+    <p>La gestión de participantes está disponible en chats grupales.</p>
+    } } @else {
+    <p>Conversación no disponible.</p>
+    <ion-button routerLink="/chats">Volver a chats</ion-button> }
+  </main>
+</ion-content>
+@if (puedeEditar()) {
+<ion-footer>
+  <div class="screen-footer">
+    <ion-button expand="block" [disabled]="!cambios().size || guardando()" (click)="guardar()">
+      {{ guardando() ? 'Guardando…' : 'Guardar participantes' }}
+    </ion-button>
+  </div>
+</ion-footer>
+}

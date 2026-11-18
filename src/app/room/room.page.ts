@@ -1,94 +1,87 @@
 import { DatePipe } from '@angular/common';
-import type { OnInit, OnDestroy } from '@angular/core';
-import { afterNextRender, Component, computed, inject, Injector, signal, viewChild } from '@angular/core';
-import { FormsModule } from '@angular/forms';
-import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import type { ElementRef, OnInit, OnDestroy } from '@angular/core';
 import {
-  IonHeader,
-  IonToolbar,
-  IonTitle,
+  afterNextRender,
+  ChangeDetectorRef,
+  Component,
+  computed,
+  inject,
+  Injector,
+  signal,
+  viewChild,
+} from '@angular/core';
+import { FormsModule } from '@angular/forms';
+import { ActivatedRoute, RouterLink } from '@angular/router';
+import {
   IonContent,
   IonButton,
-  IonInput,
   IonTextarea,
   IonIcon,
+  IonBackButton,
   AlertController,
+  ActionSheetController,
 } from '@ionic/angular';
-import type { User } from 'firebase/auth';
+import type { ActionSheetButton } from '@ionic/angular';
 import { addIcons } from 'ionicons';
 import {
   attachOutline,
-  chatbubblesOutline,
   chevronBackOutline,
-  createOutline,
   documentAttachOutline,
+  ellipsisHorizontal,
   locationOutline,
-  notificationsOutline,
-  searchOutline,
+  personAddOutline,
   sendOutline,
 } from 'ionicons/icons';
 
-import { AuthService } from '../services/auth.services';
-import type { Sala, Mensaje, Adjunto, Ubicacion, Participante } from '../services/chat.service';
+import { ChatSessionService } from '../services/chat-session.service';
+import type { Mensaje, Adjunto, Ubicacion, Participante } from '../services/chat.service';
 import { ChatService } from '../services/chat.service';
 import { LocationService } from '../services/location.service';
-import { NotificationsService } from '../services/notifications.service';
-import type { Perfil } from '../services/profiles.service';
-import { ProfilesService } from '../services/profiles.service';
 import { ToastService } from '../services/toast.service';
 import { AvatarComponent } from '../shared/avatar.component';
-import { ChatSidebarComponent } from '../shared/chat-sidebar.component';
 
 @Component({
-  selector: 'app-home',
-  templateUrl: 'home.page.html',
-  styleUrls: ['home.page.scss'],
+  selector: 'app-room',
+  templateUrl: 'room.page.html',
+  styleUrls: ['room.page.scss'],
   imports: [
     DatePipe,
     FormsModule,
-    RouterLink,
-    IonHeader,
-    IonToolbar,
-    IonTitle,
     IonContent,
     IonButton,
-    IonInput,
     IonTextarea,
     AvatarComponent,
-    ChatSidebarComponent,
     IonIcon,
+    RouterLink,
+    IonBackButton,
   ],
 })
-export class HomePage implements OnInit, OnDestroy {
+export class RoomPage implements OnInit, OnDestroy {
   constructor() {
     addIcons({
       attachOutline,
-      chatbubblesOutline,
       chevronBackOutline,
-      createOutline,
       documentAttachOutline,
+      ellipsisHorizontal,
       locationOutline,
-      notificationsOutline,
-      searchOutline,
+      personAddOutline,
       sendOutline,
     });
   }
-  readonly uid = signal('');
-  readonly perfil = signal<Perfil | null>(null);
-  readonly salas = signal<Sala[]>([]);
+  readonly session = inject(ChatSessionService);
+  readonly uid = this.session.uid;
+  readonly perfil = this.session.perfil;
   readonly salaId = signal('');
-  readonly sala = computed(() => this.salas().find((item) => item.id === this.salaId()) ?? null);
+  readonly sala = computed(() => this.session.salasVisibles().find((item) => item.id === this.salaId()) ?? null);
   readonly mensajes = signal<Mensaje[]>([]);
   readonly participantes = signal<Participante[]>([]);
-  readonly mostrarCrear = signal(false);
-  readonly cargando = signal(true);
+  readonly fotoConversacion = computed(() =>
+    this.sala()?.direct ? this.participantes().find((persona) => persona.uid !== this.uid())?.foto_url : null,
+  );
   readonly ocupado = signal(false);
   readonly ubicando = signal(false);
   readonly error = signal('');
   readonly emojis = ['👍', '❤️', '😂', '🎉'];
-  readonly notifications = inject(NotificationsService);
-  tituloSala = '';
-  uidParticipante = '';
   texto = '';
   editandoId = '';
   textoEditado = '';
@@ -96,19 +89,15 @@ export class HomePage implements OnInit, OnDestroy {
   cantidad = 100;
 
   private readonly chat = inject(ChatService);
-  private readonly profiles = inject(ProfilesService);
-  private readonly auth = inject(AuthService);
-  private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
   private readonly alerts = inject(AlertController);
+  private readonly actions = inject(ActionSheetController);
+  private readonly changeDetector = inject(ChangeDetectorRef);
   private readonly locations = inject(LocationService);
   private readonly toasts = inject(ToastService);
   private readonly injector = inject(Injector);
-  private readonly content = viewChild(IonContent);
-  private cancelarAuth?: () => void;
-  private cancelarSalas?: () => void;
+  private readonly conversationScroll = viewChild<ElementRef<HTMLDivElement>>('conversationScroll');
   private cancelarMensajes?: () => void;
-  private solicitudSala?: { id: string; title: string };
   private envioPendiente?: {
     id: string;
     key: string;
@@ -118,87 +107,22 @@ export class HomePage implements OnInit, OnDestroy {
   };
 
   ngOnInit(): void {
-    this.cancelarAuth = this.auth.observar((user) => {
-      void this.iniciar(user);
-    });
+    this.salaId.set(this.route.snapshot.paramMap.get('id') ?? '');
   }
 
   ionViewWillEnter(): void {
-    if (this.uid()) void this.cargarPerfil(this.uid());
+    this.escucharMensajes();
+    void this.cargarParticipantes();
+    void this.session.refrescarPerfil();
+  }
+
+  ionViewWillLeave(): void {
+    this.cancelarMensajes?.();
   }
 
   ngOnDestroy(): void {
-    this.cancelarAuth?.();
-    this.cancelarSalas?.();
     this.cancelarMensajes?.();
   }
-
-  private async iniciar(user: User | null): Promise<void> {
-    this.cancelarSalas?.();
-    this.cancelarMensajes?.();
-    this.uid.set(user?.uid ?? '');
-    this.salas.set([]);
-    this.cerrarSala();
-    this.perfil.set(null);
-    this.texto = '';
-    this.archivo = null;
-    this.envioPendiente = undefined;
-    if (!user) {
-      this.cargando.set(false);
-      await this.router.navigateByUrl('/auth', { replaceUrl: true });
-      return;
-    }
-    this.cargando.set(true);
-    this.cancelarSalas = this.chat.observarSalas(
-      user.uid,
-      (salas) => {
-        if (this.uid() !== user.uid) return;
-        this.salas.set(salas.sort((a, b) => a.title.localeCompare(b.title)));
-        this.cargando.set(false);
-        if (this.salaId() && !salas.some((item) => item.id === this.salaId())) this.cerrarSala();
-        const solicitada = this.route.snapshot.queryParamMap.get('room');
-        if (!this.salaId() && solicitada && salas.some((item) => item.id === solicitada)) this.abrirSala(solicitada);
-      },
-      (error) => {
-        this.mostrarError(error);
-        this.cargando.set(false);
-      },
-    );
-    await this.cargarPerfil(user.uid);
-  }
-
-  private async cargarPerfil(uid: string): Promise<void> {
-    try {
-      const perfil = await this.profiles.obtenerMiPerfil();
-      if (this.uid() === uid) this.perfil.set(perfil);
-    } catch (error: unknown) {
-      this.mostrarError(error);
-    }
-  }
-
-  abrirSala(id: string): void {
-    if (this.ocupado()) return;
-    this.cancelarMensajes?.();
-    this.salaId.set(id);
-    this.mensajes.set([]);
-    this.participantes.set([]);
-    this.texto = '';
-    this.archivo = null;
-    this.editandoId = '';
-    this.envioPendiente = undefined;
-    this.cantidad = 100;
-    this.escucharMensajes();
-    void this.cargarParticipantes();
-  }
-
-  cerrarSala(): void {
-    this.cancelarMensajes?.();
-    this.salaId.set('');
-    this.mensajes.set([]);
-    this.participantes.set([]);
-    this.editandoId = '';
-  }
-
   private escucharMensajes(): void {
     this.cancelarMensajes?.();
     const id = this.salaId();
@@ -211,7 +135,8 @@ export class HomePage implements OnInit, OnDestroy {
           if (mensajes.at(-1)?.id !== anterior) {
             afterNextRender(
               () => {
-                void this.content()?.scrollToBottom(150);
+                const scroll = this.conversationScroll()?.nativeElement;
+                if (scroll && this.salaId() === id) scroll.scrollTo(0, scroll.scrollHeight);
               },
               { injector: this.injector },
             );
@@ -231,20 +156,6 @@ export class HomePage implements OnInit, OnDestroy {
     this.escucharMensajes();
   }
 
-  async crearSala(): Promise<void> {
-    await this.ejecutar(async () => {
-      const title = this.tituloSala.trim();
-      if (!title) throw new Error('Escribe un nombre para la sala');
-      if (this.solicitudSala?.title !== title) this.solicitudSala = { id: crypto.randomUUID(), title };
-      const result = await this.chat.crearSala(this.solicitudSala.id, title);
-      this.tituloSala = '';
-      this.solicitudSala = undefined;
-      this.mostrarCrear.set(false);
-      this.ocupado.set(false);
-      this.abrirSala(result.id);
-    });
-  }
-
   async cargarParticipantes(): Promise<void> {
     const id = this.salaId();
     if (!id) return;
@@ -254,14 +165,6 @@ export class HomePage implements OnInit, OnDestroy {
     } catch (error: unknown) {
       this.mostrarError(error);
     }
-  }
-
-  async cambiarParticipante(uid: string, agregar: boolean): Promise<void> {
-    await this.ejecutar(async () => {
-      await this.chat.cambiarParticipante(this.salaId(), uid, agregar);
-      this.uidParticipante = '';
-      await this.cargarParticipantes();
-    });
   }
 
   elegirArchivo(event: Event): void {
@@ -341,9 +244,30 @@ export class HomePage implements OnInit, OnDestroy {
       throw new Error('La sesión o la sala cambió. Vuelve a intentarlo');
   }
 
+  async opcionesMensaje(mensaje: Mensaje): Promise<void> {
+    if (this.ocupado()) return;
+    const salaId = this.salaId();
+    const propia = mensaje.authorUid === this.uid();
+    const buttons: ActionSheetButton[] = this.emojis.map((emoji) => ({
+      text: mensaje.reactions[this.uid()] === emoji ? `Quitar reacción ${emoji}` : `Reaccionar ${emoji}`,
+      data: { emoji },
+    }));
+    if (propia) buttons.push({ text: 'Editar', role: 'edit' });
+    if (propia || this.sala()?.ownerUid === this.uid()) buttons.push({ text: 'Eliminar', role: 'destructive' });
+    buttons.push({ text: 'Cancelar', role: 'cancel' });
+    const menu = await this.actions.create({ header: 'Opciones del mensaje', buttons });
+    await menu.present();
+    const { role, data } = await menu.onDidDismiss<{ emoji?: string }>();
+    if (salaId !== this.salaId() || this.ocupado()) return;
+    if (role === 'edit') this.comenzarEdicion(mensaje);
+    else if (role === 'destructive') await this.eliminar(mensaje);
+    else if (data?.emoji) await this.reaccionar(mensaje, data.emoji);
+  }
+
   comenzarEdicion(mensaje: Mensaje): void {
     this.editandoId = mensaje.id;
     this.textoEditado = mensaje.text;
+    this.changeDetector.markForCheck();
   }
 
   async guardarEdicion(): Promise<void> {
@@ -377,6 +301,13 @@ export class HomePage implements OnInit, OnDestroy {
     return Object.values(mensaje.reactions).filter((value) => value === emoji).length;
   }
 
+  continuaMensaje(mensaje: Mensaje, anterior?: Mensaje): boolean {
+    if (!anterior || anterior.authorUid !== mensaje.authorUid) return false;
+    if (!mensaje.createdAt || !anterior.createdAt) return true;
+    const intervalo = mensaje.createdAt.toMillis() - anterior.createdAt.toMillis();
+    return intervalo >= 0 && intervalo <= 5 * 60 * 1000;
+  }
+
   nombreAutor(mensaje: Mensaje): string {
     return this.participantes().find((persona) => persona.uid === mensaje.authorUid)?.nombre ?? mensaje.authorUid;
   }
@@ -397,14 +328,6 @@ export class HomePage implements OnInit, OnDestroy {
       enlace.download = adjunto.name;
       enlace.click();
     });
-  }
-
-  async activarNotificaciones(): Promise<void> {
-    await this.ejecutar(() => this.notifications.activar());
-  }
-
-  async salir(): Promise<void> {
-    await this.ejecutar(() => this.auth.salir());
   }
 
   private async ejecutar(operacion: () => Promise<void>): Promise<void> {

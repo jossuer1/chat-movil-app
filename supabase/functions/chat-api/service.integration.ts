@@ -13,6 +13,8 @@ async function fixture() {
   const owner = `owner-${id}`;
   const alice = `alice-${id}`;
   const bob = `bob-${id}`;
+  const newUid = `new-${id}`;
+  const alias = `nuevo_${id.slice(0, 8)}`;
   const database = new (class extends FirebaseGateway {
     override user(uid: string) {
       return Promise.resolve({ localId: uid });
@@ -34,7 +36,18 @@ async function fixture() {
           synchronized.push(JSON.parse(String(options?.body)));
           return Promise.resolve(Response.json(null));
         }
-        if (url.includes('/rest/v1/profiles')) return Promise.resolve(Response.json({ nombre: 'Alicia' }));
+        if (url.includes('/rest/v1/profiles')) {
+          const params = new URL(url).searchParams;
+          const requestedUid = params.get('firebase_uid')?.slice(3);
+          const profileUid = params.get('usuario') === `eq.${alias}` ? newUid : requestedUid;
+          return Promise.resolve(
+            Response.json(
+              profileUid
+                ? { firebase_uid: profileUid, nombre: 'Alicia', usuario: profileUid === newUid ? alias : null }
+                : null,
+            ),
+          );
+        }
         if (url.includes('/rest/v1/chat_locations')) {
           if (options?.method === 'POST') {
             const point = JSON.parse(String(options.body));
@@ -74,6 +87,8 @@ async function fixture() {
     owner,
     alice,
     bob,
+    newUid,
+    alias,
     database,
     service,
     synchronized,
@@ -114,6 +129,50 @@ integration('only the owner can add and remove participants', async () => {
   );
   await test.service.execute('changeMember', test.owner, { roomId: test.id, uid: 'eve', add: false });
   assert.equal(test.synchronized.at(-1)?.p_revision, 3);
+});
+
+integration('an accepted friend can be added by checkbox and shares one direct room with its sender', async () => {
+  const test = await fixture();
+  assert.deepEqual(await test.service.execute('findFriend', test.owner, { identifier: `@${test.alias}` }), {
+    uid: test.newUid,
+    nombre: 'Alicia',
+    usuario: test.alias,
+  });
+  await assert.rejects(
+    () => test.service.execute('requestFriend', test.owner, { identifier: `@${test.alias}`, confirmedUid: test.bob }),
+    { code: 'profile-changed' },
+  );
+  assert.deepEqual(await test.database.query('chatFriends', 'uids', test.owner, 25, 'ARRAY_CONTAINS'), []);
+  assert.deepEqual(
+    await test.service.execute('requestFriend', test.owner, { identifier: `@${test.alias.toUpperCase()}` }),
+    {
+      status: 'pending',
+    },
+  );
+  assert.deepEqual(await test.service.execute('requestFriend', test.owner, { identifier: test.newUid }), {
+    status: 'pending',
+  });
+  const [friendship] = await test.database.query('chatFriends', 'uids', test.owner, 25, 'ARRAY_CONTAINS');
+  const id = friendship.path.split('/')[1];
+  const changes = { roomId: test.id, add: [test.newUid], remove: [test.bob] };
+  await assert.rejects(() => test.service.execute('changeFriend', test.owner, { id, accept: true }), ApiError);
+  await assert.rejects(() => test.service.execute('updateMembers', test.owner, changes), ApiError);
+  await test.service.execute('changeFriend', test.newUid, { id, accept: true });
+  await test.service.execute('updateMembers', test.owner, changes);
+  assert.deepEqual((await test.database.get(`chatRooms/${test.id}`))?.data.memberUids, [
+    test.owner,
+    test.alice,
+    test.newUid,
+  ]);
+  const direct = (await test.service.execute('openDirect', test.owner, { uid: test.newUid })) as { id: string };
+  assert.deepEqual(await test.service.execute('openDirect', test.newUid, { uid: test.owner }), direct);
+  await assert.rejects(
+    () => test.service.execute('updateMembers', test.owner, { roomId: direct.id, add: [], remove: [test.newUid] }),
+    ApiError,
+  );
+  await test.service.execute('changeFriend', test.owner, { id, accept: false });
+  assert.ok(await test.database.get(`chatRooms/${direct.id}`));
+  assert.equal(await test.database.get(friendship.path), null);
 });
 
 integration('message retries create one message and one notification job', async () => {

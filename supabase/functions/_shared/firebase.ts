@@ -113,6 +113,7 @@ export interface DocumentData {
 }
 export type Precondition = { exists: boolean } | { updateTime: string };
 export interface Write {
+  verify?: string;
   update?: { name: string; fields: Fields };
   delete?: string;
   currentDocument?: Precondition;
@@ -221,6 +222,10 @@ export class FirebaseGateway {
 
   remove(path: string, condition?: Precondition): Write {
     return { delete: `${this.documentRoot}/${path}`, currentDocument: condition };
+  }
+
+  verify(path: string, updateTime: string): Write {
+    return { verify: `${this.documentRoot}/${path}`, currentDocument: { updateTime } };
   }
 
   async commit(writes: Write[]): Promise<void> {

@@ -1,16 +1,17 @@
-﻿import { TestBed } from '@angular/core/testing';
+import { signal } from '@angular/core';
+import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { AlertController } from '@ionic/angular';
 
-import { AuthService } from '../services/auth.services';
+import { ChatSessionService } from '../services/chat-session.service';
 import { ChatService } from '../services/chat.service';
 import { LocationService } from '../services/location.service';
 import { ToastService } from '../services/toast.service';
 
-import { HomePage } from './home.page';
+import { RoomPage } from './room.page';
 
-describe('HomePage sending', () => {
-  let component: HomePage;
+describe('RoomPage sending', () => {
+  let component: RoomPage;
   let enviar: ReturnType<typeof vi.fn>;
   let guardarUbicacion: ReturnType<typeof vi.fn>;
   let obtener: ReturnType<typeof vi.fn>;
@@ -30,13 +31,16 @@ describe('HomePage sending', () => {
       providers: [
         provideRouter([]),
         { provide: ChatService, useValue: { enviar, guardarUbicacion } },
-        { provide: AuthService, useValue: { observar: vi.fn(() => vi.fn()) } },
+        {
+          provide: ChatSessionService,
+          useValue: { uid: signal(''), perfil: signal(null), salasVisibles: signal([]), cargando: signal(false) },
+        },
         { provide: LocationService, useValue: { obtener } },
         { provide: ToastService, useValue: { mostrar } },
         { provide: AlertController, useValue: { create: createAlert } },
       ],
     });
-    const fixture = TestBed.createComponent(HomePage);
+    const fixture = TestBed.createComponent(RoomPage);
     component = fixture.componentInstance;
     fixture.detectChanges();
     component.uid.set('alice');

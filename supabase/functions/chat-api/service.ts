@@ -10,6 +10,23 @@ interface Room extends Record<string, unknown> {
   memberUids: string[];
   revision: number;
   createdAt: string;
+  direct?: boolean;
+}
+interface Contact {
+  firebase_uid: string;
+  nombre: string;
+  apellido?: string;
+  usuario?: string | null;
+}
+
+async function pairId(first: string, second: string): Promise<string> {
+  const hash = new Uint8Array(
+    await crypto.subtle.digest('SHA-256', new TextEncoder().encode(JSON.stringify([first, second].sort()))),
+  );
+  hash[6] = (hash[6] & 15) | 80;
+  hash[8] = (hash[8] & 63) | 128;
+  const hex = Array.from(hash.subarray(0, 16), (byte) => byte.toString(16).padStart(2, '0')).join('');
+  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
 }
 interface Attachment {
   path: string;
@@ -150,6 +167,24 @@ export class ChatBackend {
         return this.changeMember(uid, data);
       case 'listMembers':
         return this.listMembers(uid, data);
+      case 'requestFriend':
+        return this.requestFriend(uid, data);
+      case 'findFriend': {
+        const contact = await this.findFriend(uid, data.identifier);
+        return {
+          uid: contact.firebase_uid,
+          nombre: [contact.nombre, contact.apellido].filter(Boolean).join(' '),
+          usuario: contact.usuario ?? null,
+        };
+      }
+      case 'changeFriend':
+        return this.changeFriend(uid, data);
+      case 'openDirect':
+        return this.openDirect(uid, data);
+      case 'updateMembers':
+        return this.updateMembers(uid, data);
+      case 'uploadProfilePhoto':
+        return this.uploadProfilePhoto(uid, data);
       case 'prepareUpload':
         return this.prepareUpload(uid, data);
       case 'downloadFile':
@@ -169,6 +204,172 @@ export class ChatBackend {
       default:
         throw new ApiError(404, 'not-found', 'Operación desconocida');
     }
+  }
+
+  private async contact(field: 'firebase_uid' | 'usuario', value: string): Promise<Contact | null> {
+    const { data, error } = await this.supabase
+      .from('profiles')
+      .select('firebase_uid,nombre,apellido,usuario')
+      .eq(field, value)
+      .maybeSingle<Contact>();
+    if (error) throw new ApiError(503, 'profiles', 'No se pudo consultar el perfil en Supabase');
+    return data;
+  }
+
+  private async findFriend(uid: string, value: unknown): Promise<Contact> {
+    const identifier = text(value, 129);
+    const alias = identifier.replace(/^@/, '').toLowerCase();
+    const target =
+      (!identifier.startsWith('@') && (await this.contact('firebase_uid', identifier))) ||
+      (/^[a-z0-9_]{3,24}$/.test(alias) && (await this.contact('usuario', alias)));
+    if (!target)
+      throw new ApiError(
+        404,
+        'profile-not-found',
+        'No encontramos ese perfil. Comprueba el @usuario o el UID completo',
+      );
+    if (target.firebase_uid === uid)
+      throw new ApiError(400, 'self-friend', 'Introduce el nombre de usuario o UID de otra persona');
+    return target;
+  }
+
+  private async requestFriend(uid: string, data: Record<string, unknown>) {
+    const target = await this.findFriend(uid, data.identifier);
+    if (data.confirmedUid !== undefined && target.firebase_uid !== data.confirmedUid)
+      throw new ApiError(409, 'profile-changed', 'El perfil cambió. Busca a la persona de nuevo');
+    const sender = await this.contact('firebase_uid', uid);
+    if (!sender) throw new ApiError(400, 'profile-required', 'Completa tu perfil para enviar solicitudes');
+    const path = `chatFriends/${await pairId(uid, target.firebase_uid)}`;
+    const contacts = [sender, target].map((person) => ({
+      uid: person.firebase_uid,
+      nombre: [person.nombre, person.apellido].filter(Boolean).join(' '),
+      usuario: person.usuario ?? null,
+    }));
+    const previous = await this.firebase.get(path);
+    if (previous) return { status: previous.data.status };
+    try {
+      await this.firebase.commit([
+        this.firebase.put(
+          path,
+          { uids: contacts.map((person) => person.uid), contacts, senderUid: uid, status: 'pending' },
+          { exists: false },
+        ),
+      ]);
+      return { status: 'pending' };
+    } catch (error) {
+      if (!isConflict(error)) throw error;
+      const existing = await this.firebase.get(path);
+      if (!existing) throw new ApiError(409, 'friend-changed', 'La solicitud cambió. Vuelve a intentarlo');
+      return { status: existing.data.status };
+    }
+  }
+
+  private async changeFriend(uid: string, data: Record<string, unknown>) {
+    const id = uuid(data.id);
+    const path = `chatFriends/${id}`;
+    const existing = await this.firebase.get(path);
+    if (!existing || !(existing.data.uids as string[]).includes(uid))
+      throw new ApiError(404, 'friend-not-found', 'La solicitud o amistad ya no está disponible');
+    if (data.accept === true && existing.data.senderUid === uid)
+      throw new ApiError(403, 'permission-denied', 'Solo el destinatario puede aceptar la solicitud');
+    if (typeof data.accept !== 'boolean') throw new ApiError(400, 'invalid-argument', 'Operación inválida');
+    const condition = { updateTime: existing.updateTime };
+    try {
+      await this.firebase.commit([
+        data.accept
+          ? this.firebase.put(path, { ...existing.data, status: 'accepted' }, condition)
+          : this.firebase.remove(path, condition),
+      ]);
+    } catch (error) {
+      if (!isConflict(error)) throw error;
+      throw new ApiError(409, 'friend-changed', 'La solicitud o amistad cambió. Vuelve a intentarlo');
+    }
+    return { ok: true };
+  }
+
+  private async acceptedFriend(uid: string, target: string): Promise<DocumentData> {
+    const friendship = await this.firebase.get(`chatFriends/${await pairId(uid, target)}`);
+    if (friendship?.data.status !== 'accepted')
+      throw new ApiError(403, 'friend-required', 'La otra persona debe aceptar tu solicitud de amistad');
+    return friendship;
+  }
+
+  private async openDirect(uid: string, data: Record<string, unknown>): Promise<{ id: string }> {
+    const target = text(data.uid, 128);
+    const friendship = await this.acceptedFriend(uid, target);
+    const id = await pairId(uid, target);
+    const path = `chatRooms/${id}`;
+    const matching = (room: DocumentData | null) =>
+      room?.data.direct === true &&
+      (room.data.memberUids as string[]).length === 2 &&
+      (room.data.memberUids as string[]).includes(uid) &&
+      (room.data.memberUids as string[]).includes(target);
+    if (!matching(await this.firebase.get(path))) {
+      try {
+        await this.firebase.commit([
+          this.firebase.verify(friendship.path, friendship.updateTime),
+          this.firebase.put(
+            path,
+            {
+              title: 'Chat directo',
+              ownerUid: uid,
+              memberUids: [uid, target],
+              direct: true,
+              directNames: (friendship.data.contacts as { uid: string; nombre: string }[]).map(({ uid, nombre }) => ({
+                uid,
+                nombre,
+              })),
+              revision: 1,
+              createdAt: new Date(),
+            },
+            { exists: false },
+          ),
+          this.job(`room-${id}-1`, uid, 'sync-room', id),
+        ]);
+      } catch (error) {
+        if (!isConflict(error)) throw error;
+        if (!matching(await this.firebase.get(path)))
+          throw new ApiError(409, 'direct-changed', 'No se pudo abrir el chat directo. Vuelve a intentarlo');
+      }
+    }
+    await this.synchronize(id);
+    return { id };
+  }
+
+  private async uploadProfilePhoto(uid: string, data: Record<string, unknown>) {
+    const mime = data.mime;
+    const extensions: Record<string, string> = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp' };
+    if (typeof mime !== 'string' || !Object.hasOwn(extensions, mime))
+      throw new ApiError(400, 'photo-type', 'Selecciona una foto JPG, PNG o WebP');
+    const encoded = text(data.content, 4 * 1024 * 1024);
+    let bytes: Uint8Array<ArrayBuffer>;
+    try {
+      bytes = Uint8Array.from(atob(encoded), (character) => character.charCodeAt(0));
+    } catch {
+      throw new ApiError(400, 'photo-content', 'La foto no se pudo leer');
+    }
+    const starts = (signature: number[], offset = 0) =>
+      signature.every((byte, index) => bytes[offset + index] === byte);
+    const valid =
+      (mime === 'image/jpeg' && starts([255, 216, 255])) ||
+      (mime === 'image/png' && starts([137, 80, 78, 71, 13, 10, 26, 10])) ||
+      (mime === 'image/webp' && starts([82, 73, 70, 70]) && starts([87, 69, 66, 80], 8));
+    if (!valid) throw new ApiError(400, 'photo-content', 'La foto no tiene un formato JPG, PNG o WebP válido');
+    const path = `${uid}/${crypto.randomUUID()}.${extensions[mime]}`;
+    const { error } = await this.supabase.storage.from('profile-photos').upload(path, bytes, {
+      contentType: mime,
+      cacheControl: '3600',
+      upsert: false,
+    });
+    if (error) {
+      console.error('profile-photos', error.name, error.message);
+      throw new ApiError(
+        503,
+        'photo-upload',
+        'No se pudo guardar la foto en Supabase. Intenta de nuevo o continúa sin la foto seleccionada',
+      );
+    }
+    return { path };
   }
 
   private async profile(uid: string): Promise<{ nombre: string }> {
@@ -217,25 +418,47 @@ export class ChatBackend {
     const targetUid = text(data.uid, 128);
     if (typeof data.add !== 'boolean') throw new ApiError(400, 'invalid-argument', 'Operación inválida');
     const initial = await this.roomForUser(roomId, uid);
-    if (initial.data.ownerUid !== uid)
+    if (initial.data.ownerUid !== uid || initial.data.direct)
       throw new ApiError(403, 'permission-denied', 'Solo el creador administra participantes');
     if (targetUid === uid) throw new ApiError(400, 'owner-required', 'El creador debe permanecer en la sala');
-    if (data.add) await this.firebase.user(targetUid);
+    if (data.add && !(await this.contact('firebase_uid', targetUid))) await this.firebase.user(targetUid);
+    return this.writeMembers(uid, roomId, data.add ? [targetUid] : [], data.add ? [] : [targetUid]);
+  }
+
+  private async updateMembers(uid: string, data: Record<string, unknown>): Promise<{ ok: boolean }> {
+    const roomId = uuid(data.roomId);
+    const parseUids = (value: unknown) => {
+      if (!Array.isArray(value) || value.length > 100)
+        throw new ApiError(400, 'invalid-argument', 'La selección de participantes no es válida');
+      return [...new Set(value.map((item) => text(item, 128)))];
+    };
+    const add = parseUids(data.add);
+    const remove = parseUids(data.remove);
+    if (add.includes(uid) || remove.includes(uid) || add.some((member) => remove.includes(member)))
+      throw new ApiError(400, 'invalid-argument', 'La selección de participantes no es válida');
+    return this.writeMembers(uid, roomId, add, remove, true);
+  }
+
+  private async writeMembers(uid: string, roomId: string, add: string[], remove: string[], friendsOnly = false) {
     for (let attempt = 0; attempt < 5; attempt++) {
       const room = await this.roomForUser(roomId, uid);
-      if (room.data.ownerUid !== uid)
+      if (room.data.ownerUid !== uid || room.data.direct)
         throw new ApiError(403, 'permission-denied', 'Solo el creador administra participantes');
       const members = new Set(room.data.memberUids);
-      if (data.add) members.add(targetUid);
-      else members.delete(targetUid);
+      const added = add.filter((member) => !members.has(member));
+      const removed = remove.filter((member) => members.has(member));
+      for (const member of added) members.add(member);
+      for (const member of removed) members.delete(member);
       if (members.size > 100) throw new ApiError(400, 'room-full', 'La sala admite hasta 100 participantes');
-      if (members.size === room.data.memberUids.length) {
+      if (!added.length && !removed.length) {
         await this.synchronize(roomId);
         return { ok: true };
       }
+      const friendships = friendsOnly ? await Promise.all(added.map((member) => this.acceptedFriend(uid, member))) : [];
       const revision = room.data.revision + 1;
       try {
         await this.firebase.commit([
+          ...friendships.map((friendship) => this.firebase.verify(friendship.path, friendship.updateTime)),
           this.roomWrite(room, { memberUids: [...members], revision }),
           this.job(`room-${roomId}-${revision}`, uid, 'sync-room', roomId),
         ]);

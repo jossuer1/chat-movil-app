@@ -24,6 +24,8 @@ export interface Sala {
   ownerUid: string;
   memberUids: string[];
   revision: number;
+  direct?: boolean;
+  directNames?: Pick<Participante, 'uid' | 'nombre'>[];
 }
 
 export interface Participante {
@@ -31,6 +33,13 @@ export interface Participante {
   nombre: string;
   usuario?: string | null;
   foto_url?: string | null;
+}
+
+export interface Amistad {
+  id: string;
+  senderUid: string;
+  status: 'pending' | 'accepted';
+  contacts: Participante[];
 }
 
 export interface Adjunto {
@@ -63,6 +72,34 @@ export interface Mensaje {
 export class ChatService {
   private readonly backend = inject(BackendService);
 
+  observarAmistades(uid: string, recibir: (amistades: Amistad[]) => void, fallo: (error: Error) => void): Unsubscribe {
+    return onSnapshot(
+      query(collection(firestore, 'chatFriends'), where('uids', 'array-contains', uid)),
+      (snapshot) => recibir(snapshot.docs.map((item) => ({ ...item.data(), id: item.id }) as Amistad)),
+      fallo,
+    );
+  }
+
+  buscarContacto(identifier: string): Promise<Participante> {
+    return this.backend.llamar('findFriend', { identifier });
+  }
+
+  solicitarAmistad(identifier: string, confirmedUid: string): Promise<{ status: Amistad['status'] }> {
+    return this.backend.llamar('requestFriend', { identifier, confirmedUid });
+  }
+
+  cambiarAmistad(id: string, accept: boolean): Promise<void> {
+    return this.backend.llamar('changeFriend', { id, accept });
+  }
+
+  abrirChatDirecto(uid: string): Promise<{ id: string }> {
+    return this.backend.llamar('openDirect', { uid });
+  }
+
+  guardarParticipantes(roomId: string, add: string[], remove: string[]): Promise<void> {
+    return this.backend.llamar('updateMembers', { roomId, add, remove });
+  }
+
   observarSalas(uid: string, recibir: (salas: Sala[]) => void, fallo: (error: Error) => void): Unsubscribe {
     return onSnapshot(
       query(collection(firestore, 'chatRooms'), where('memberUids', 'array-contains', uid)),
@@ -86,10 +123,6 @@ export class ChatService {
 
   crearSala(id: string, titulo: string): Promise<{ id: string }> {
     return this.backend.llamar('createRoom', { id, title: titulo.trim() });
-  }
-
-  cambiarParticipante(roomId: string, uid: string, agregar: boolean): Promise<void> {
-    return this.backend.llamar('changeMember', { roomId, uid: uid.trim(), add: agregar });
   }
 
   participantes(roomId: string): Promise<Participante[]> {

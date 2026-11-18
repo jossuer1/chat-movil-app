@@ -3,6 +3,7 @@
 import { supabase } from '../supabase.config';
 
 import { AuthService } from './auth.services';
+import { BackendService } from './backend.service';
 
 export interface Perfil {
   firebase_uid: string;
@@ -14,6 +15,10 @@ export interface Perfil {
   foto_url?: string | null;
 }
 export type DatosPerfil = Pick<Perfil, 'nombre' | 'apellido' | 'usuario' | 'ciudad' | 'foto_path'>;
+export interface FotoPerfil {
+  mime: string;
+  content: string;
+}
 const columnas = 'firebase_uid,nombre,apellido,usuario,ciudad,foto_path';
 
 export function validarPerfil(perfil: DatosPerfil): DatosPerfil {
@@ -37,9 +42,37 @@ export function validarFoto(archivo: File): void {
   if (!archivo.size || archivo.size > 3 * 1024 * 1024) throw new Error('La foto debe pesar como máximo 3 MB');
 }
 
+export async function prepararFoto(archivo: File): Promise<FotoPerfil> {
+  validarFoto(archivo);
+  const content = await new Promise<string>((resolve, reject) => {
+    const lector = new FileReader();
+    lector.onload = () => resolve(String(lector.result).slice(String(lector.result).indexOf(',') + 1));
+    lector.onerror = () =>
+      reject(
+        new Error('No se pudo leer la foto. Descárgala al dispositivo o selecciona otra imagen', {
+          cause: lector.error,
+        }),
+      );
+    lector.onabort = () => reject(new Error('Se interrumpió la lectura de la foto'));
+    lector.readAsDataURL(archivo);
+  });
+  return { mime: archivo.type, content };
+}
+
 @Injectable({ providedIn: 'root' })
 export class ProfilesService {
   private readonly authService = inject(AuthService);
+  private readonly backend = inject(BackendService);
+
+  private async subirFoto(foto: FotoPerfil): Promise<string> {
+    try {
+      const { path } = await this.backend.llamar<{ path: string }>('uploadProfilePhoto', foto);
+      return path;
+    } catch (error) {
+      const mensaje = error instanceof Error ? error.message : 'Comprueba tu conexión e inténtalo de nuevo';
+      throw new Error(`No se pudo subir la foto. ${mensaje}`, { cause: error });
+    }
+  }
   async obtenerMiPerfil(): Promise<Perfil | null> {
     const usuario = await this.authService.obtenerUsuarioParaSupabase();
     const { data, error } = await supabase
@@ -50,21 +83,13 @@ export class ProfilesService {
     if (error) throw error;
     return data ? this.conFoto(data) : null;
   }
-  async guardarPerfil(perfil: DatosPerfil, foto?: File | null): Promise<Perfil> {
+  async guardarPerfil(perfil: DatosPerfil, foto?: FotoPerfil | null): Promise<Perfil> {
     const datos = validarPerfil(perfil);
-    if (foto) validarFoto(foto);
     const usuario = await this.authService.obtenerUsuarioParaSupabase();
     const anterior = datos.foto_path;
     let nueva: string | null = null;
     if (foto) {
-      const extension = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp' }[foto.type];
-      nueva = `${usuario.uid}/${crypto.randomUUID()}.${extension}`;
-      const { error } = await supabase.storage.from('profile-photos').upload(nueva, foto, {
-        contentType: foto.type,
-        cacheControl: '3600',
-        upsert: false,
-      });
-      if (error) throw new Error('No se pudo subir la foto: ' + error.message);
+      nueva = await this.subirFoto(foto);
       datos.foto_path = nueva;
     }
     const { data, error } = await supabase

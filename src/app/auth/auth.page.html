@@ -1,33 +1,23 @@
-﻿<ion-header class="auth-header">
-  <ion-toolbar
-    ><ion-title
-      ><span class="brand-title"
-        ><img src="assets/brand/chat-dual-logo.svg" alt="" width="30" height="30" />Chat Dual</span
-      ></ion-title
-    ></ion-toolbar
-  >
-</ion-header>
 <ion-content>
   <main class="auth-layout">
-    <section class="intro">
-      <img class="brand-mark" src="assets/brand/chat-dual-logo.svg" alt="Logo de Chat Dual" width="80" height="80" />
-      <p class="eyebrow">TU GENTE, MÁS CERCA</p>
-      <h1>Un mensaje.<br /><span>Mil conexiones.</span></h1>
-      <p>Comparte tu día, crea una sala y mantén la conversación con las personas que importan.</p>
-      <div class="intro-bubbles" aria-hidden="true">
-        <span>¿Nos conectamos? 👋</span><span>¡Ya estoy aquí! 💜</span>
+    <header class="intro">
+      <div class="auth-brand">
+        <img src="assets/brand/chat-dual-logo.svg" alt="" width="48" height="48" />
+        <span>Chat Dual</span>
       </div>
-      <small>Chat Dual · Conversaciones en tiempo real</small>
-    </section>
+      @if (!editar) {
+      <p>Conversaciones privadas, individuales y en grupo.</p>
+      }
+    </header>
     <section class="auth-panel" aria-label="Cuenta de Chat Dual">
+      <a class="auth-back" [routerLink]="editar ? '/settings' : '/'">‹ {{ editar ? 'Ajustes' : 'Inicio' }}</a>
       @if (verificandoSesion) {
       <p role="status">Preparando tu cuenta...</p>
       } @else {
-      <p class="eyebrow">{{ editar ? 'TU ESPACIO' : 'BIENVENIDO A CHAT DUAL' }}</p>
-      <h2>
-        {{ usuario ? (editar ? 'Mi perfil' : 'Completa tu cuenta') : modo === 'login' ? 'Qué bueno verte' : 'Crea tu
+      <h1>
+        {{ usuario ? (editar ? 'Mi perfil' : 'Completa tu cuenta') : modo === 'login' ? 'Inicia sesión' : 'Crea tu
         cuenta' }}
-      </h2>
+      </h1>
       <p class="subtitle">
         {{ usuario ? 'Así te verán en tus conversaciones.' : modo === 'login' ? 'Inicia sesión y continúa donde lo
         dejaste.' : 'Cuéntanos un poco de ti para empezar a chatear.' }}
@@ -42,11 +32,18 @@
             <input
               type="file"
               accept="image/jpeg,image/png,image/webp"
-              [disabled]="cargando"
+              [disabled]="cargando || leyendoFoto"
               (change)="elegirFoto($event)"
             />
           </label>
           <small>Opcional · JPG, PNG o WebP · hasta 3 MB</small>
+          @if (leyendoFoto) {
+          <small role="status">Leyendo foto…</small>
+          } @else if (foto) {
+          <button class="discard-photo" type="button" [disabled]="cargando" (click)="descartarFotoSeleccionada()">
+            Descartar foto seleccionada
+          </button>
+          }
         </div>
         <div class="form-grid">
           <ion-input
@@ -133,23 +130,24 @@
         } @else {
         <p class="field-hint">Sesión iniciada como {{ usuario.email }}</p>
         }
-        <ion-button type="submit" expand="block" [disabled]="cargando"
-          >{{ cargando ? 'Guardando...' : usuario ? 'Guardar y entrar al chat' : modo === 'login' ? 'Iniciar sesión' :
-          'Crear cuenta y chatear' }}</ion-button
+        <ion-button type="submit" expand="block" [disabled]="cargando || leyendoFoto"
+          >{{ cargando ? 'Guardando...' : usuario ? 'Guardar perfil' : modo === 'login' ? 'Iniciar sesión' : 'Crear
+          cuenta y chatear' }}</ion-button
         >
       </form>
       } @else { <ion-button (click)="cargarPerfil()">Reintentar cargar perfil</ion-button> } @if (error) {
       <ion-text color="danger"><p role="alert">{{ error }}</p></ion-text> } @if (!usuario) {
       <p class="switch-mode">
         {{ modo === 'login' ? '¿Primera vez por aquí?' : '¿Ya tienes una cuenta?' }}
-        <button type="button" [disabled]="cargando" (click)="cambiarModo()">
-          {{ modo === 'login' ? 'Crear cuenta' : 'Iniciar sesión' }}
-        </button>
+        <a class="switch-link" [routerLink]="modo === 'login' ? '/register' : '/login'" queryParamsHandling="preserve"
+          >{{ modo === 'login' ? 'Crear cuenta' : 'Iniciar sesión' }}</a
+        >
       </p>
-      } @else {
+      } @else if (!editar) {
       <div class="profile-actions">
-        @if (editar) { <a routerLink="/home">Volver al chat</a> }
-        <button type="button" [disabled]="cargando" (click)="cerrarSesion()">Cerrar sesión</button>
+        <ion-button class="logout" fill="clear" [disabled]="cargando || leyendoFoto" (click)="cerrarSesion()">
+          <ion-icon slot="start" name="log-out-outline" />Cerrar sesión
+        </ion-button>
       </div>
       } }
     </section>

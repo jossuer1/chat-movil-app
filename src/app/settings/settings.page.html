@@ -1,0 +1,46 @@
+﻿<ion-header
+  ><header class="screen-header"><h1>Ajustes</h1></header></ion-header
+>
+<ion-content>
+  <main class="screen-body">
+    <article class="screen-card profile-card">
+      <div class="contact-row">
+        <app-avatar [name]="nombre()" [src]="session.perfil()?.foto_url" />
+        <div>
+          <strong>{{ nombre() || 'Mi perfil' }}</strong>
+          @if (session.perfil()?.usuario; as usuario) { <small>{{ '@' + usuario }}</small> } @if
+          (session.perfil()?.ciudad; as ciudad) { <small>{{ ciudad }}</small> }
+        </div>
+      </div>
+      <ion-button routerLink="/profile" fill="outline">Editar perfil</ion-button>
+    </article>
+    <section class="screen-card invitation-card">
+      <h2>Mi identificador para invitaciones</h2>
+      @if (session.perfil()?.usuario; as usuario) {
+      <div class="identity-row">
+        <div><small>Usuario</small><code>{{ '@' + usuario }}</code></div>
+        <ion-button fill="clear" (click)="copiar('@' + usuario, 'usuario')"
+          >{{ copiado() === 'usuario' ? 'Copiado' : 'Copiar usuario' }}</ion-button
+        >
+      </div>
+      } @if (session.uid(); as uid) {
+      <div class="identity-row">
+        <div><small>UID</small><code>{{ uid }}</code></div>
+        <ion-button fill="clear" (click)="copiar(uid, 'uid')"
+          >{{ copiado() === 'uid' ? 'Copiado' : 'Copiar UID' }}</ion-button
+        >
+      </div>
+      }
+      <span class="sr-only" role="status">{{ aviso() }}</span>
+      @if (aviso() && !copiado()) {
+      <p>{{ aviso() }}</p>
+      }
+    </section>
+    <div class="screen-card logout-card">
+      <ion-button expand="block" color="danger" fill="outline" [disabled]="ocupado()" (click)="salir()">
+        <ion-icon name="log-out-outline" slot="start" aria-hidden="true" />Cerrar sesión
+      </ion-button>
+    </div>
+  </main>
+</ion-content>
+<ion-footer><app-main-nav active="settings" /></ion-footer>

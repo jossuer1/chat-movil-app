@@ -17,8 +17,8 @@
         flex: 0 0 var(--avatar-size, 44px);
         border-radius: 50%;
         overflow: hidden;
-        background: var(--avatar-bg, #e9e5ff);
-        color: #6250cc;
+        background: var(--avatar-bg, var(--lavender));
+        color: var(--accent-ink);
         align-items: center;
         justify-content: center;
         font-size: calc(var(--avatar-size, 44px) * 0.34);

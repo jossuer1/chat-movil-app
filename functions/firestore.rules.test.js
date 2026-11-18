@@ -135,3 +135,15 @@ test('invalid coordinates cannot be written', async () => {
     }),
   );
 });
+
+test('only the two users can read their friendship and only the backend can write it', async () => {
+  const path = 'chatFriends/alice-bob';
+  await environment.withSecurityRulesDisabled((context) =>
+    setDoc(doc(context.firestore(), path), { uids: ['alice', 'bob'], senderUid: 'alice', status: 'pending' }),
+  );
+  const alice = database('alice');
+  await assertSucceeds(getDocs(query(collection(alice, 'chatFriends'), where('uids', 'array-contains', 'alice'))));
+  await assertSucceeds(getDoc(doc(database('bob'), path)));
+  await assertFails(getDoc(doc(database('eve'), path)));
+  await assertFails(updateDoc(doc(alice, path), { status: 'accepted' }));
+});

@@ -1,4 +1,4 @@
-﻿import { TestBed } from '@angular/core/testing';
+import { TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
 import type { User } from 'firebase/auth';
 
@@ -73,8 +73,24 @@ describe('AuthPage account flow', () => {
       { nombre: 'Ana', apellido: 'Pérez', usuario: 'ana_perez', ciudad: 'Quito', foto_path: null },
       null,
     );
-    expect(navigate).toHaveBeenCalledWith('/home', { replaceUrl: true });
+    expect(navigate).toHaveBeenCalledWith('/chats', { replaceUrl: true });
     expect(page.contrasena).toBe('');
+  });
+  it('reads the selected photo before resetting the picker and saves the prepared bytes', async () => {
+    signup();
+    const input = { files: [new File(['photo'], 'photo.png', { type: 'image/png' })], value: 'photo.png' };
+    const elegir = page.elegirFoto({ target: input } as unknown as Event);
+    expect(input.value).toBe('photo.png');
+    await page.procesar();
+    expect(auth.registrar).not.toHaveBeenCalled();
+    await elegir;
+    expect(input.value).toBe('');
+    expect(page.fotoUrl).toBe('data:image/png;base64,cGhvdG8=');
+    await page.procesar();
+    expect(profiles.guardarPerfil).toHaveBeenCalledWith(expect.any(Object), {
+      mime: 'image/png',
+      content: 'cGhvdG8=',
+    });
   });
   it('retries a failed profile save without registering a duplicate Firebase account', async () => {
     signup();
@@ -88,12 +104,12 @@ describe('AuthPage account flow', () => {
     await page.guardarMiPerfil();
     expect(auth.registrar).toHaveBeenCalledOnce();
     expect(profiles.guardarPerfil).toHaveBeenCalledTimes(2);
-    expect(navigate).toHaveBeenCalledWith('/home', { replaceUrl: true });
+    expect(navigate).toHaveBeenCalledWith('/chats', { replaceUrl: true });
   });
   it('loads an existing profile on login and enters chat without rewriting it', async () => {
     profiles.obtenerMiPerfil.mockResolvedValue({ firebase_uid: 'alice', nombre: 'Nombre existente' });
     await page.procesar();
-    expect(navigate).toHaveBeenCalledWith('/home', { replaceUrl: true });
+    expect(navigate).toHaveBeenCalledWith('/chats', { replaceUrl: true });
     expect(profiles.guardarPerfil).not.toHaveBeenCalled();
   });
   it('keeps the profile form available for an authenticated account without a profile', async () => {

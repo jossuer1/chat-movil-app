@@ -1,0 +1,74 @@
+﻿<ion-header>
+  <header class="screen-header">
+    <h1>Chats</h1>
+    <ion-button fill="clear" aria-label="Activar notificaciones" (click)="activarNotificaciones()">
+      <ion-icon name="notifications-outline" slot="icon-only" />
+    </ion-button>
+    <ion-button
+      class="new-chat"
+      aria-label="Nuevo chat o grupo"
+      [attr.aria-expanded]="crear()"
+      (click)="crear.set(!crear())"
+    >
+      <ion-icon name="create-outline" slot="icon-only" />
+    </ion-button>
+  </header>
+</ion-header>
+<ion-content>
+  <main class="screen-body">
+    <label class="screen-search">
+      <ion-icon name="search-outline" aria-hidden="true" />
+      <input
+        type="search"
+        placeholder="Buscar conversaciones"
+        aria-label="Buscar una sala"
+        [ngModel]="busqueda()"
+        (ngModelChange)="busqueda.set($event)"
+      />
+    </label>
+    @if (crear()) {
+    <form class="screen-card" (ngSubmit)="crearSala()">
+      <ion-input
+        fill="outline"
+        label="Nombre de la sala"
+        label-placement="stacked"
+        name="titulo"
+        maxlength="80"
+        [(ngModel)]="titulo"
+      />
+      <ion-button type="submit" [disabled]="ocupado() || !titulo.trim() || !session.perfil()">Crear sala</ion-button>
+    </form>
+    } @if (session.errorSalas()) {
+    <p role="alert">{{ session.errorSalas() }}</p>
+    } @else if (session.cargando()) {
+    <p role="status">Cargando salas…</p>
+    } @else {
+    <div class="section-heading">
+      <h2>Tus conversaciones</h2>
+      <span>{{ salas().length }}</span>
+    </div>
+    <div class="screen-list">
+      @for (sala of salas(); track sala.id) {
+      <a class="screen-card contact-row room-link" [class.group-room]="!sala.direct" [routerLink]="['/room', sala.id]">
+        <app-avatar [name]="sala.title" />
+        <div>
+          <strong>{{ sala.title }}</strong
+          ><small>{{ sala.direct ? 'Chat directo' : sala.memberUids.length + ' participantes' }}</small>
+        </div>
+        <span class="room-type">{{ sala.direct ? 'Privado' : 'Grupo' }}</span>
+      </a>
+      } @empty {
+      <div class="empty-state" role="status">
+        <ion-icon name="create-outline" aria-hidden="true" />
+        <h2>{{ busqueda().trim() ? 'Sin coincidencias' : 'Empieza una conversación' }}</h2>
+        <p>
+          {{ busqueda().trim() ? 'Prueba con otro nombre.' : 'Crea un grupo con el botón superior o abre un chat desde
+          Amigos.' }}
+        </p>
+      </div>
+      }
+    </div>
+    }
+  </main>
+</ion-content>
+<ion-footer><app-main-nav active="chats" /></ion-footer>

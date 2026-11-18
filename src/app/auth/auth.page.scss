@@ -1,36 +1,183 @@
-﻿:host { --ion-background-color: #f7f8fc; }
-.auth-header { box-shadow: none; }
-ion-toolbar { --background: #fff; --border-width: 0; padding: 4px 16px; }
-ion-title { font-weight: 800; letter-spacing: -.7px; }
-.auth-layout { display: grid; grid-template-columns: 1fr 1fr; max-width: 1120px; margin: auto; min-height: calc(100% - 60px); align-items: center; gap: 70px; padding: 48px 32px; }
-.intro { padding: 20px; color: #20213b; }
-.brand-mark { display: block; width: 80px; height: 80px; filter: drop-shadow(0 10px 20px #7659e725); }
-.password-toggle { min-height: 44px; min-width: 44px; margin: 0; --padding-start: 10px; --padding-end: 10px; }
-.eyebrow { font-size: 11px; font-weight: 700; letter-spacing: 2px; color: #7663b5; margin-top: 28px; }
-h1 { font-size: clamp(36px, 4.8vw, 62px); line-height: 1.08; letter-spacing: -2.5px; font-weight: 800; margin: 24px 0; }
-h1 span { color: #7760df; }
-.intro > p:not(.eyebrow) { font-size: 17px; line-height: 1.7; color: #76788d; max-width: 380px; }
-.intro-bubbles { display: grid; gap: 12px; margin: 36px 0; }
-.intro-bubbles span { background: white; border-radius: 20px 20px 20px 4px; padding: 17px 22px; width: fit-content; box-shadow: 0 6px 24px #262a4810; }
-.intro-bubbles span + span { background: #7760df; color: white; margin-left: 80px; border-radius: 20px 20px 4px 20px; }
-.intro small { color: #8c8d9e; }
-.auth-panel { background: #fff; padding: 32px; border: 1px solid #ececf3; border-radius: 28px; box-shadow: 0 18px 60px #34366b08; }
-.auth-panel .eyebrow { margin-top: 0; }
-h2 { font-size: 28px; font-weight: 750; letter-spacing: -.8px; }
-.subtitle, .field-hint { color: #7b7d90; line-height: 1.6; }
-form { display: grid; gap: 16px; margin-top: 26px; }
-.form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-ion-input { --border-radius: 12px; --border-color: #dedfe9; --highlight-color-focused: #7760df; --background: #fff; }
-.field-hint { font-size: 12px; margin-top: -8px; }
-ion-button { --border-radius: 13px; --box-shadow: none; min-height: 48px; font-weight: 600; text-transform: none; letter-spacing: 0; }
-.photo-picker { display: grid; grid-template-columns: 66px 1fr; align-items: center; gap: 6px 16px; margin-bottom: 6px; }
-app-avatar { --avatar-size: 66px; grid-row: span 2; }
-.photo-picker small { color: #8b8c9d; font-size: 11px; }
-.photo-label, button, a { color: #6d56d8; font-weight: 600; cursor: pointer; }
-.photo-label { position: relative; }
-.photo-label input { position: absolute; inset: 0; opacity: 0; width: 100%; cursor: pointer; }
-.photo-label:focus-within { outline: 2px solid #7659e7; outline-offset: 4px; }
-.switch-mode { text-align: center; font-size: 13px; margin: 24px 0 0; }
-button { background: none; padding: 6px; font-size: inherit; }
-.profile-actions { display: flex; justify-content: space-between; align-items: center; margin-top: 16px; font-size: 13px; }
-@media (max-width: 760px) { .auth-layout { grid-template-columns: 1fr; padding: 24px 16px; gap: 20px; max-width: 500px; } .intro { display: none; } .auth-panel { padding: 24px; } }
+ion-content {
+  --background: radial-gradient(ellipse at 0% 0%, #8b5cf611, transparent 55%), var(--canvas);
+}
+.auth-layout {
+  display: grid;
+  align-content: start;
+  gap: 20px;
+  min-height: 100%;
+  max-width: 480px;
+  margin: auto;
+  padding: calc(20px + var(--ion-safe-area-top, 0px)) 20px calc(24px + var(--ion-safe-area-bottom, 0px));
+}
+.intro {
+  padding: 0 4px;
+}
+.auth-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 19px;
+  font-weight: 700;
+  letter-spacing: -0.04em;
+}
+.auth-brand img {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+}
+.intro p {
+  display: none;
+}
+.auth-panel {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+h1 {
+  font-size: clamp(28px, 7vw, 34px);
+  letter-spacing: -0.045em;
+  font-weight: 750;
+  margin: 8px 0 0;
+}
+.subtitle,
+.field-hint {
+  color: var(--muted);
+  line-height: 1.5;
+}
+.subtitle {
+  margin: 8px 0 24px;
+  font-size: 14px;
+  max-width: 36ch;
+}
+form,
+.form-grid {
+  display: grid;
+  gap: 14px;
+}
+form > *,
+.form-grid > * {
+  min-width: 0;
+}
+.form-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.field-hint {
+  font-size: 12px;
+  margin: -6px 0 0;
+}
+form > ion-button[type='submit'] {
+  margin: 8px 0 0;
+  min-height: 50px;
+}
+.password-toggle {
+  --padding-start: 8px;
+  --padding-end: 8px;
+  min-width: 44px;
+  margin: 0;
+}
+.photo-picker {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 0 14px;
+  padding: 12px;
+  background: var(--paper);
+  border: 1px dashed var(--line);
+  border-radius: 16px;
+  margin-bottom: 4px;
+}
+app-avatar {
+  --avatar-size: 56px;
+  grid-row: span 2;
+}
+.photo-picker small {
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.5;
+}
+.photo-label,
+button,
+a {
+  color: var(--accent-ink);
+  font-weight: 600;
+}
+.photo-label {
+  position: relative;
+  display: flex;
+  align-items: center;
+  min-height: 44px;
+  cursor: pointer;
+  font-size: 14px;
+}
+.photo-label input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  width: 100%;
+  cursor: pointer;
+}
+.photo-label:focus-within {
+  outline: 2px solid var(--accent);
+  border-radius: 6px;
+}
+.discard-photo {
+  grid-column: 2;
+  text-align: left;
+}
+.switch-mode {
+  text-align: center;
+  color: var(--muted);
+  font-size: 13px;
+  margin: 20px 0 0;
+}
+button {
+  background: none;
+  min-height: 44px;
+  padding: 6px;
+  font-size: inherit;
+}
+.profile-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 12px;
+}
+[role='alert'] {
+  background: #f8717110;
+  border: 1px solid #f8717140;
+  border-radius: 12px;
+  padding: 12px;
+  color: var(--ion-color-danger);
+  font-size: 14px;
+}
+.auth-back,
+.switch-link {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  text-decoration: none;
+}
+.auth-back {
+  font-size: 13px;
+  color: var(--muted);
+}
+@media (min-width: 660px) {
+  .auth-layout {
+    padding-block: 40px;
+    gap: 24px;
+  }
+  .auth-panel {
+    padding: 28px;
+    background: var(--ivory);
+    border: 1px solid var(--line);
+    border-radius: 24px;
+  }
+}
+@media (max-width: 340px) {
+  .auth-layout {
+    padding-inline: 14px;
+  }
+  .form-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

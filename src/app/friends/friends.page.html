@@ -1,0 +1,86 @@
+﻿<ion-header>
+  <header class="screen-header">
+    <h1>Amigos</h1>
+    <ion-button fill="clear" aria-label="Activar notificaciones" (click)="activarNotificaciones()">
+      <ion-icon name="notifications-outline" slot="icon-only" />
+    </ion-button>
+  </header>
+</ion-header>
+<ion-content>
+  <main class="screen-body">
+    <form class="screen-card search-card" (ngSubmit)="buscar()">
+      <ion-input
+        fill="outline"
+        label="Agregar por @usuario o UID"
+        label-placement="stacked"
+        name="identificador"
+        maxlength="129"
+        [ngModel]="identificador"
+        (ngModelChange)="cambiarIdentificador($event)"
+        [disabled]="ocupado()"
+      />
+      <ion-button type="submit" fill="outline" [disabled]="ocupado() || !identificador.trim() || !session.perfil()"
+        >{{ ocupado() ? 'Procesando…' : 'Buscar' }}</ion-button
+      >
+      @if (encontrado(); as persona) {
+      <div class="contact-row" role="status">
+        <app-avatar [name]="persona.nombre" />
+        <div>
+          <strong>{{ persona.nombre }}</strong>@if (persona.usuario) { <small>{{ '@' + persona.usuario }}</small> }
+        </div>
+      </div>
+      <ion-button type="button" expand="block" [disabled]="ocupado()" (click)="solicitar()"
+        >Enviar solicitud</ion-button
+      >
+      } @if (error()) {
+      <p class="screen-error" role="alert">{{ error() }}</p>
+      } @if (!session.perfil() && !session.cargando()) {
+      <p>Completa tu perfil en Ajustes para enviar solicitudes.</p>
+      }
+    </form>
+    <div class="section-heading">
+      <h2>Amigos y solicitudes</h2>
+      <span>{{ session.contactos().length }}</span>
+    </div>
+    @if (session.cargando()) {
+    <p role="status">Cargando amigos…</p>
+    } @else {
+    <div class="screen-list">
+      @for (item of session.contactos(); track item.id) {
+      <article class="screen-card">
+        <div class="contact-row">
+          <app-avatar [name]="item.persona.nombre" [src]="item.persona.foto_url" />
+          <div>
+            <strong>{{ item.persona.nombre }}</strong>
+            @if (item.persona.usuario) { <small>{{ '@' + item.persona.usuario }}</small> } @if (item.status ===
+            'pending') {
+            <small>{{ item.senderUid === session.uid() ? 'Solicitud enviada' : 'Solicitud recibida' }}</small>
+            }
+          </div>
+        </div>
+        <div class="screen-actions">
+          @if (item.status === 'accepted') {
+          <ion-button fill="clear" [disabled]="ocupado()" (click)="abrirChat(item.persona.uid)">Abrir chat</ion-button>
+          <ion-button fill="clear" color="danger" [disabled]="ocupado()" (click)="cambiarAmistad(item.id, false)"
+            >Quitar amigo</ion-button
+          >
+          } @else { @if (item.senderUid !== session.uid()) {
+          <ion-button fill="clear" [disabled]="ocupado()" (click)="cambiarAmistad(item.id, true)">Aceptar</ion-button>
+          }
+          <ion-button fill="clear" color="danger" [disabled]="ocupado()" (click)="cambiarAmistad(item.id, false)">
+            {{ item.senderUid === session.uid() ? 'Cancelar solicitud' : 'Rechazar' }}
+          </ion-button>
+          }
+        </div>
+      </article>
+      } @empty {
+      <div class="empty-state">
+        <h2>Encuentra a tu gente</h2>
+        <p>Busca por @usuario o UID para enviar una solicitud de amistad.</p>
+      </div>
+      }
+    </div>
+    }
+  </main>
+</ion-content>
+<ion-footer><app-main-nav active="friends" /></ion-footer>
